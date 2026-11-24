@@ -1,0 +1,220 @@
+CV pool: 741 rows / 247 respondents
+Locked test: 129 rows / 43 respondents
+Running 180 (text_params, fold) units on 8 workers...
+  [1/180] units done
+  [2/180] units done
+  [3/180] units done
+  [4/180] units done
+  [5/180] units done
+  [6/180] units done
+  [7/180] units done
+  [8/180] units done
+  [9/180] units done
+  [10/180] units done
+  [11/180] units done
+  [12/180] units done
+  [13/180] units done
+  [14/180] units done
+  [15/180] units done
+  [16/180] units done
+  [17/180] units done
+  [18/180] units done
+  [19/180] units done
+  [20/180] units done
+  [21/180] units done
+  [22/180] units done
+  [23/180] units done
+  [24/180] units done
+  [25/180] units done
+  [26/180] units done
+  [27/180] units done
+  [28/180] units done
+  [29/180] units done
+  [30/180] units done
+  [31/180] units done
+  [32/180] units done
+  [33/180] units done
+  [34/180] units done
+  [35/180] units done
+  [36/180] units done
+  [37/180] units done
+  [38/180] units done
+  [39/180] units done
+  [40/180] units done
+  [41/180] units done
+  [42/180] units done
+  [43/180] units done
+  [44/180] units done
+  [45/180] units done
+  [46/180] units done
+  [47/180] units done
+  [48/180] units done
+  [49/180] units done
+  [50/180] units done
+  [51/180] units done
+  [52/180] units done
+  [53/180] units done
+  [54/180] units done
+  [55/180] units done
+  [56/180] units done
+  [57/180] units done
+  [58/180] units done
+  [59/180] units done
+  [60/180] units done
+  [61/180] units done
+  [62/180] units done
+  [63/180] units done
+  [64/180] units done
+  [65/180] units done
+  [66/180] units done
+  [67/180] units done
+  [68/180] units done
+  [69/180] units done
+  [70/180] units done
+  [71/180] units done
+  [72/180] units done
+  [73/180] units done
+  [74/180] units done
+  [75/180] units done
+  [76/180] units done
+  [77/180] units done
+  [78/180] units done
+  [79/180] units done
+  [80/180] units done
+  [81/180] units done
+  [82/180] units done
+  [83/180] units done
+  [84/180] units done
+  [85/180] units done
+  [86/180] units done
+  [87/180] units done
+  [88/180] units done
+  [89/180] units done
+  [90/180] units done
+  [91/180] units done
+  [92/180] units done
+  [93/180] units done
+  [94/180] units done
+  [95/180] units done
+  [96/180] units done
+  [97/180] units done
+  [98/180] units done
+  [99/180] units done
+  [100/180] units done
+  [101/180] units done
+  [102/180] units done
+  [103/180] units done
+  [104/180] units done
+  [105/180] units done
+  [106/180] units done
+  [107/180] units done
+  [108/180] units done
+  [109/180] units done
+  [110/180] units done
+  [111/180] units done
+  [112/180] units done
+  [113/180] units done
+  [114/180] units done
+  [115/180] units done
+  [116/180] units done
+  [117/180] units done
+  [118/180] units done
+  [119/180] units done
+  [120/180] units done
+  [121/180] units done
+  [122/180] units done
+  [123/180] units done
+  [124/180] units done
+  [125/180] units done
+  [126/180] units done
+  [127/180] units done
+  [128/180] units done
+  [129/180] units done
+  [130/180] units done
+  [131/180] units done
+  [132/180] units done
+  [133/180] units done
+  [134/180] units done
+  [135/180] units done
+  [136/180] units done
+  [137/180] units done
+  [138/180] units done
+  [139/180] units done
+  [140/180] units done
+  [141/180] units done
+  [142/180] units done
+  [143/180] units done
+  [144/180] units done
+  [145/180] units done
+  [146/180] units done
+  [147/180] units done
+  [148/180] units done
+  [149/180] units done
+  [150/180] units done
+  [151/180] units done
+  [152/180] units done
+  [153/180] units done
+  [154/180] units done
+  [155/180] units done
+  [156/180] units done
+  [157/180] units done
+  [158/180] units done
+  [159/180] units done
+  [160/180] units done
+  [161/180] units done
+  [162/180] units done
+  [163/180] units done
+  [164/180] units done
+  [165/180] units done
+  [166/180] units done
+  [167/180] units done
+  [168/180] units done
+  [169/180] units done
+  [170/180] units done
+  [171/180] units done
+  [172/180] units done
+  [173/180] units done
+  [174/180] units done
+  [175/180] units done
+  [176/180] units done
+  [177/180] units done
+  [178/180] units done
+  [179/180] units done
+  [180/180] units done
+
+Grid search: 4680 fits in 4356.0s
+
+Top 10 configs by mean CV accuracy:
+ min_df  vocab_cap weighting        C penalty  mean_acc  std_acc  mean_f1  n_warn
+      2        300     count 0.082540      l1  0.914667 0.034502 0.914482       0
+      3        100     tfidf 0.082540      l1  0.914639 0.037775 0.914325       0
+      2        100     count 0.082540      l1  0.914639 0.036753 0.914323       0
+      3        100     tfidf 0.215443      l1  0.914639 0.037289 0.914312       0
+      2        100     tfidf 0.215443      l1  0.913306 0.036146 0.913118       0
+      2        100     tfidf 0.082540      l1  0.913306 0.035593 0.913052       0
+      3        100     count 0.082540      l1  0.913279 0.038039 0.912989       0
+      3        300     count 0.082540      l1  0.913279 0.038039 0.912989       0
+      3        300     tfidf 0.082540      l1  0.911946 0.037136 0.911551       0
+      3        300     tfidf 0.215443      l1  0.911918 0.040965 0.911636       0
+
+Best config: {'min_df': 2, 'vocab_cap': 300, 'weighting': 'count'} {'C': 0.0825404185268019, 'penalty': 'l1'}
+
+Locked test accuracy:  0.9070
+Locked test macro-F1:  0.9050
+Locked test log-loss:  0.2831
+Locked test confusion matrix (rows=true, cols=pred), classes=['Baseball', 'Basketball', 'Soccer']
+[[43  0  0]
+ [ 2 41  0]
+ [ 6  4 33]]
+              precision    recall  f1-score   support
+
+    Baseball       0.84      1.00      0.91        43
+  Basketball       0.91      0.95      0.93        43
+      Soccer       1.00      0.77      0.87        43
+
+    accuracy                           0.91       129
+   macro avg       0.92      0.91      0.91       129
+weighted avg       0.92      0.91      0.91       129
+
+
+Saved softmax_model.npz
