@@ -339,7 +339,7 @@ that fold's held-out partition.
 \textbf{Logistic regression.} $P(y=k\mid x) \propto \exp(w_k^\top x + b_k)$, trained by minimizing
 mean cross-entropy plus an L2 penalty $\lambda\lVert W\rVert_2^2$ or an L1 penalty
 $\lambda\lVert W\rVert_1$, with $C=1/\lambda$. We use scikit-learn's
-\texttt{LogisticRegression}~\cite{pedregosa2011scikit} (LBFGS for L2, SAGA for L1,
+\texttt{LogisticRegression} (LBFGS for L2, SAGA for L1,
 \texttt{max\_iter}=5000, no class weighting since the classes are exactly balanced). The
 cross-entropy loss is convex, so the fitted model does not depend on initialization.
 Section~\ref{sec:data-exploration}'s exploratory pipeline check used a fixed text configuration
@@ -577,13 +577,5 @@ learned.}
 \item \textbf{\todo{teammate 4}:} \todo{3 sentences on their contribution and main lesson
 learned -- e.g.\ data exploration, report writing, or a shared responsibility.}
 \end{itemize}
-
-% ==================================================
-% References
-% ==================================================
-\section{References}
-
-\bibliographystyle{plain}
-\bibliography{references}
 
 \end{document}
