@@ -1,0 +1,589 @@
+% =========================================================
+% CSC311 Final Project Report
+% Single column, 12pt, 8 pages max.
+% =========================================================
+
+\documentclass[12pt]{article}
+
+% ---------- Packages ----------
+\usepackage[margin=1in]{geometry}
+\usepackage{parskip}         % blank line between paragraphs, no indent
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath, amssymb}
+\usepackage{siunitx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{XCharter}
+\usepackage[xcharter]{newtxmath}
+\usepackage[scaled=0.96]{inconsolata}
+
+%--------- Headers and footers ------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\setlength{\headheight}{14.49998pt}
+\fancyhf{}
+\fancyhead[L]{CSC311 Project Report}
+\fancyhead[R]{Group Members}
+\fancyfoot[C]{\thepage}
+
+% ---------- Captions & Lists ----------
+\captionsetup{font=small, labelfont=bf}
+\setlist[itemize]{noitemsep, topsep=2pt}
+\setlist[enumerate]{noitemsep, topsep=2pt}
+
+% ---------- Helpful macros ----------
+\newcommand{\bestmodel}{\textit{[Best Model Name -- TODO once random forest / MLP results are in]}}
+\newcommand{\projacc}{\textbf{[XX.XX\% -- TODO]}}
+% Visible marker for anything still pending from a teammate / another model.
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+% ---------- Safe figure helper ----------
+\makeatletter
+\newcommand{\maybeincludegraphics}[3]{%
+  \begin{figure}[h]
+    \centering
+    \IfFileExists{#1}{%
+      \includegraphics[width=0.7\linewidth]{#1}%
+    }{%
+      \fbox{%
+        \parbox[c][0.28\textheight][c]{0.7\linewidth}{%
+          \centering
+          \vspace{0.5em}
+          \textit{[Placeholder for \texttt{#1}]}\\
+          Add your figure here.
+          \vspace{0.5em}
+        }%
+      }%
+    }%
+    \caption{#2}
+    \label{#3}
+  \end{figure}%
+}
+\makeatother
+
+\usepackage{xcolor}
+\definecolor{royalblue}{rgb}{0.0, 0.14, 0.4}
+\definecolor{royalblue(web)}{rgb}{0.25, 0.41, 0.88}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable}
+\usepackage{comment}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+
+
+% =========================================================
+% Title Page
+% =========================================================
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{3cm}
+
+    {\Large {CSC311: Introduction to Machine Learning} \par}
+    \vspace{1cm}
+
+    {\Large {Project Report} \par}
+    \vspace{1cm}
+
+    {\large \textit{Predicting a Sport from a Survey Response} \par}
+    \vspace{3cm}
+
+    {\large Submitted by \par}
+
+    \vspace{0.5cm}
+    {\large \todo{group number}}
+
+    \vspace{0.5cm}
+    {\large \todo{Shubham Mohta, Student 2, Student 3, Student 4} \par}
+
+    \vfill
+    {\large University of Toronto \\ Fall 2026 \par}
+\end{titlepage}
+\clearpage
+\setcounter{page}{1}
+
+% ================================================
+% Executive Summary
+% ================================================
+\section{Executive Summary}
+
+We compare three model families on a 3-class classification task -- predicting which of Soccer,
+Baseball or Basketball a survey respondent was describing from their answers to 13 questions
+(ratings, Likert items, multi-select checkboxes, free text and a price question): multinomial
+logistic regression (softmax regression), a random forest, and a multilayer perceptron (MLP).
+Our fully tuned logistic regression model, selected by grouped 5-fold cross-validation (repeated
+3 times, 15 folds total) over a 312-point hyperparameter grid, reaches \textbf{90.7\% accuracy}
+(macro-F1 0.905) on a 129-row test split that was held out and touched only once. It is an
+L1-regularized model ($C \approx 0.0825$) using raw word-count text features rather than TF-IDF.
+\todo{Fill in the random forest and MLP summary numbers here once those teammates' final
+results are in, then state which of the three families was chosen as the final model and why --
+this paragraph must not exceed 1/4 page.}
+
+\section{Data Exploration}\label{sec:data-exploration}
+
+\textbf{Splitting first.} The data has 870 rows from 290 respondents; each respondent answered
+once for each of Baseball, Basketball and Soccer, so the classes are exactly balanced (290 each,
+and 204 each in our training split), and class imbalance is not a concern. The \texttt{id} column
+identifies the respondent, not the sport, so it has no relationship to the label and would only let
+a model memorize people; we use it for grouping, never as a feature. Before looking at any feature
+we split the \emph{respondents} (seed 311, a reproducible seeded shuffle of the sorted respondent
+ids -- see \texttt{make\_splits.py}) into 70\% train (204 respondents, 612 rows), 15\% validation
+(43, 129) and 15\% test (43, 129), and wrote this split to \texttt{splits.csv} so every model
+family in the team is tuned and evaluated on identical held-out people. Grouping keeps a person's
+rows together, mimicking the real hidden test set (new people) and preventing memorization of an
+individual's answering style. The test split is never used for exploration, preprocessing, feature
+design or hyperparameter tuning; all statistics below use the 612 training rows only, so our choices
+are not fitted to data we evaluate on later.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llrl@{}}
+\toprule
+Question & Type & Missing & Encoding \\
+\midrule
+Ease of starting (0--10) & numeric & 0.0\% & median impute, standardize \\
+Strategy / injury / individual & Likert, 5-pt & 0.0\% & ordinal 1--5, standardize \\
+Place / season / music & multi-select & 0.0\% & multi-hot, 21 binary \\
+Colour & short text & 1.0\% & top-10 one-hot + other + flag \\
+Food, song, feeling & free text & 2.6 / 9.2 / 0.3\% & TF-IDF per question \\
+Price for a seat & text (number) & 1.6\% + 2.3\% unparsed & parse, $\log(1+\$)$, clip, flag \\
+\bottomrule
+\end{tabular}
+\caption{Features (training split only). ``Missing'' counts null, empty, ``n/a'', ``-'', ``none''
+after normalizing them to a single marker.}
+\label{tab:features}
+\end{table}
+
+\textbf{Missing values and inconsistencies.} Missingness is low except for the song question
+(9.2\%). It is related to the label: songs are missing for 13.2\% of Baseball rows and 10.8\% of
+Basketball rows but only 3.4\% of Soccer rows, since many respondents know a soccer song
+(\emph{Waka Waka}) even if they know nothing else about the sport. Missingness is therefore itself
+a signal, so we keep these rows rather than dropping them: a missing text answer becomes an
+all-zero word vector, and answers such as ``none'' or ``no idea'' stay as ordinary tokenized words
+rather than being special-cased. Since an unseen respondent in the hidden test set may skip any
+question, every feature gets an imputation rule computed from the training split only (the
+training-split median, plus an explicit missing flag for ease, price and colour); computing the
+imputation value from validation or test rows would leak information into training. \emph{One
+current limitation, not yet fixed:} ease, price and colour get an explicit missing flag, but food,
+song and feeling do not, so a genuinely missing text answer and an answer that simply uses no word
+our vocabulary kept are both encoded as the same all-zero vector -- indistinguishable from each
+other even though missingness itself carries signal for exactly this reason. We plan to add a
+missing flag to the three text fields as well if ablation shows it helps, since it is a small
+change to the shared preprocessing. Colour's 176 raw strings shrink to 133 after lower-casing and
+merging synonyms (e.g.\ ``golden'' $\to$ ``gold'').
+
+\textbf{Price parsing and outliers.} A rule-based parser strips currency words, symbols and
+thousands separators (``\$1,000 CAD''$\to$1000), takes the midpoint of a range, maps refusals
+(``not willing'', ``zero'') to 0, and reads spelled-out numbers (``thirty''). Answers with no
+recoverable amount (``very willing'', ``hundreds of dollars'') are unparseable (2.3\%) and treated
+as missing. Prices are heavily right-skewed (median \$100, 95th percentile \$600, max \$10{,}000),
+so we use $\log(1+\$)$ clipped at the training split's 99th percentile (\$2{,}000) so extreme
+answers cannot dominate distances or gradients. Ease has no outliers.
+
+\maybeincludegraphics{figures/ease_price_colour.png}{(a) Baseball is rated much harder to pick up.
+(b) Log price is lower for Baseball but overlaps heavily with the other two sports (low values are
+mostly refusals). (c) Class make-up of the ten most common cleaned colours: orange, green and
+blue/white act almost like labels.}{fig:ease-price-colour}
+
+\textbf{Which features are predictive.} For ordinal features we compare (range of class
+means)/(pooled within-class SD). Ease (4.0 vs.\ 6.0--6.2; 0.99) and injury risk (2.9 vs.\ 3.8; 0.95)
+separate Baseball; ``individual brilliance can outweigh teamwork'' separates Soccer (2.9 vs.\
+3.6--3.7; 0.75); strategy (0.47) and log price (0.46) are weaker. Spearman correlations among the
+ordinal features are weak ($|\rho|\leq0.30$), so none is redundant on its own. \emph{Summer}
+(89--93\% in every class) and \emph{Outdoor public space} (87--91\%) are nearly constant and carry
+little signal; regularization shrinks their weight rather than our removing them by hand. Each of
+the features above separates one class roughly monotonically, suiting an additive linear model.
+For categorical features we compare per-class selection rates: \emph{Winter} is chosen by 61\% of
+Basketball rows vs.\ under 10\% otherwise; \emph{Indoor facility} by 97\% of Basketball rows vs.\
+23\% of Baseball rows; \emph{Latin} music almost exclusively by Soccer rows (40\%). Colour is
+similarly strong: 94\% of ``orange'' answers are Basketball, 96\% of ``green'' are Soccer, and
+75\% of ``blue''/81\% of ``white'' are Baseball; ``red'' is ambiguous across all three. For text,
+we compute, for each word used at least 8 times, the share of its rows in each class: song words
+are the strongest (``waka''/``shakira'' 100\% Soccer, 103 rows; ``take''/``ball'' 96--100\%
+Baseball); food and feeling words are individually weaker (``peanuts'' 89\%, ``hot dog''
+$\approx$65\% Baseball, ``wings'' 69\% Basketball) -- many words, each carrying a little evidence,
+which favours a model that adds up weak, mostly independent cues, such as logistic regression.
+
+\textbf{A genuine interaction, not just independent cues.} The additive story above is not the
+whole picture. \emph{Indoor facility} and \emph{Winter} are each only weakly informative alone, but
+strongly informative together (Table~\ref{tab:interaction}): selecting Indoor alone barely moves
+$P(\text{Basketball})$ away from its 33\% base rate (32\%, $n=228$), and selecting Winter alone
+actually moves it slightly \emph{down} (15\%, though $n=13$ is a small subgroup); respondents who
+select \emph{both}, however, are Basketball 85\% of the time ($n=145$) -- an effect neither feature
+predicts on its own, and far larger than adding their two small, opposite-signed individual effects
+would suggest. A purely additive model can only add each feature's own coefficient; it cannot
+reward the pair for co-occurring unless that specific combination is engineered by hand in advance.
+This directly motivates including model families that can discover such combinations on their own
+(Section~\ref{sec:methodology}).
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Subgroup (training split) & $n$ & $P(\text{Basketball})$ \\
+\midrule
+Overall & 612 & 0.33 \\
+Indoor only (not Winter) & 228 & 0.32 \\
+Winter only (not Indoor) & 13 & 0.15 \\
+Both Indoor and Winter & 145 & 0.85 \\
+Neither & 226 & 0.02 \\
+\bottomrule
+\end{tabular}
+\caption{Indoor facility and Winter interact: each alone is close to uninformative (or even
+slightly misleading, for Winter), but together they are strongly predictive of Basketball.}
+\label{tab:interaction}
+\end{table}
+
+\maybeincludegraphics{figures/categorical_selection_heatmap.png}{Percentage of each class
+selecting each multi-select option. Winter, indoor play and hip-hop point to Basketball, Latin
+music to Soccer, country music to Baseball; Summer and outdoor space are chosen by nearly
+everyone.}{fig:categorical-heatmap}
+
+\textbf{Text representation and scaling.} Answers are lower-cased and split into words (stop
+words and one-letter tokens removed). Per question, a vocabulary is built from the training split
+only (words in at least 3 rows, at most 300) and each answer becomes an L2-normalized TF-IDF
+vector, $\mathrm{tf}(w,d)\big(\log\tfrac{1+n}{1+\mathrm{df}(w)}+1\big)$, which down-weights words
+everyone uses and up-weights rare, specific ones. Words unseen in training have no weight and are
+ignored at prediction time. This gives $p=372$ features (4 ordinal, 1 price, 3 flags, 21 multi-hot,
+11 colour, 332 words) for 612 rows; with $p\approx n$ a flexible model can memorize the data, so we
+favour simple, strongly regularized models for this representation. Features are standardized with
+the training mean and SD because their scales differ and k-NN, L2 penalties and gradient descent
+are scale-sensitive (trees and Naive Bayes, which use one feature at a time, are not). This
+particular configuration ($\mathrm{min\_df}=3$, $\mathrm{vocab\_cap}=300$, TF-IDF) is fixed only
+for this exploratory pipeline check; Section~\ref{sec:methodology} tunes \texttt{min\_df},
+\texttt{vocab\_cap} and the TF-IDF-vs-count choice jointly with each family's own model
+hyperparameters rather than fixing them in advance, so the deployed models may use a different
+vocabulary size than the $p=372$ figure above.
+
+\section{Methodology}\label{sec:methodology}
+
+\subsection{Model families}
+
+Our exploration found two distinct kinds of signal, and the choice of all three families follows
+directly from both, rather than from a generic list of model pros and cons. First, most ordinal and
+categorical features are individually weak-to-moderate and roughly additive (ease, injury risk and
+individual brilliance each separate one class by a modest margin; hundreds of individual text
+words each carry a small amount of evidence), which favours a model that sums up many weak, mostly
+independent cues. Both logistic regression and Naive Bayes are natural fits for that structure. We
+chose multinomial logistic regression over Naive Bayes because Naive Bayes additionally assumes
+the features are conditionally independent given the label, and we found direct evidence against
+that assumption: the Likert items correlate with each other (Spearman $\rho$ up to 0.30), and, more
+importantly, two categorical features that are each nearly uninformative alone become strongly
+informative together (Table~\ref{tab:interaction}). Logistic regression estimates every feature's
+weight jointly and carries no independence assumption, so it keeps the additive-evidence advantage
+Naive Bayes would offer without that liability.
+
+Second, the Indoor/Winter interaction in Table~\ref{tab:interaction} is exactly the kind of
+structure a purely additive linear model cannot represent without that specific cross term being
+engineered by hand in advance. Random forests and multilayer perceptrons can both discover such
+combinations automatically -- a tree can split on Winter only within the Indoor branch, and a
+hidden unit can learn a combination of the two inputs directly -- which is why we include one of
+each alongside logistic regression, rather than three members of the same additive-evidence
+family.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}p{3cm}p{5.3cm}p{5.3cm}@{}}
+\toprule
+Model & Why it suits the data & Main risk \\
+\midrule
+Softmax (multinomial logistic) regression & Most features are monotone in the label and the text
+gives many weak additive cues (Section~\ref{sec:data-exploration}); $p \approx n$ calls for a
+heavily regularized linear model; coefficients are a simple affine map, trivial to export to numpy.
+& Cannot represent the Indoor/Winter-style interaction (Table~\ref{tab:interaction}) unless that
+specific combination is engineered by hand. \\
+Random forest & Natively splits on conjunctions like Indoor $\wedge$ Winter without
+hand-engineering them; ignores the scale differences across our feature blocks; a split on a
+90\%-constant column like \emph{Summer} rarely improves purity, so near-constant features are
+handled automatically rather than needing manual removal. & A random per-split feature subsample
+rarely includes any one of the $\sim$300 sparse per-word text columns over a structured column, so
+an unmodified forest is likely to under-use exactly the song/colour text signal the exploration
+found strongest (mitigation below). \\
+MLP & Can represent the same conjunctive effects as a random forest through its hidden layer, and
+can additionally represent smooth combinations that a tree's axis-aligned splits only approximate.
+& With $p\approx 370$--$700$ and only $n=741$ tuning rows, a hidden layer wide enough to use every
+input directly can memorize the training rows unless actively controlled (dimensionality reduction
+and regularization below). \\
+\bottomrule
+\end{tabular}
+\caption{The three model families compared in this report. All three share the preprocessing in
+Section~\ref{sec:data-exploration} (implemented once and reused identically for training and
+prediction, so differences in the comparison come only from the model, never from inconsistent
+features). We do not fine-tune a large language model: 870 short answers would overfit badly, and
+\texttt{pred.py} may only import numpy/pandas at prediction time, ruling out a deep-learning
+runtime dependency.}
+\label{tab:families}
+\end{table}
+
+\subsection{Validation protocol}
+
+The 43 test respondents (129 rows) stay locked until the single final estimate in
+Section~\ref{sec:results}. The other 247 respondents (741 rows) are used for hyperparameter
+tuning with grouped 5-fold cross-validation (\texttt{GroupKFold} on respondent \texttt{id}), so a
+person's rows are never split between a training fold and its held-out fold. Because
+\texttt{GroupKFold} has no built-in shuffling, we obtain 3 independent respondent shufflings by
+permuting row order before each repeat (fixed seeds 311, 312, 313), giving 15 fold scores per
+hyperparameter configuration -- a single 129-row validation split has a standard error of roughly
+2.6 points at 90\% accuracy, too noisy on its own to compare configurations reliably. To avoid
+leakage, the entire preprocessor from Section~\ref{sec:data-exploration} (medians, the price clip
+value, the colour vocabulary, text vocabularies and IDF weights, and the standardization
+mean/variance) is re-fit independently on each fold's training partition and applied unchanged to
+that fold's held-out partition.
+
+\subsection{Training details}
+
+\textbf{Logistic regression.} $P(y=k\mid x) \propto \exp(w_k^\top x + b_k)$, trained by minimizing
+mean cross-entropy plus an L2 penalty $\lambda\lVert W\rVert_2^2$ or an L1 penalty
+$\lambda\lVert W\rVert_1$, with $C=1/\lambda$. We use scikit-learn's
+\texttt{LogisticRegression}~\cite{pedregosa2011scikit} (LBFGS for L2, SAGA for L1,
+\texttt{max\_iter}=5000, no class weighting since the classes are exactly balanced). The
+cross-entropy loss is convex, so the fitted model does not depend on initialization.
+Section~\ref{sec:data-exploration}'s exploratory pipeline check used a fixed text configuration
+(\texttt{min\_df}=3, \texttt{vocab\_cap}=300, TF-IDF, giving $p=372$) purely for illustration; the
+tuning below instead searches \texttt{min\_df}, \texttt{vocab\_cap} and the TF-IDF-vs-count choice
+jointly with $C$ and the penalty, rather than fixing the text configuration in advance and
+inheriting it into the other two families -- each family below performs this same joint sweep
+independently rather than reusing logistic regression's choice. For \texttt{pred.py}, the
+$3 \times p$ weight matrix, the bias vector, and every fitted preprocessor statistic (vocabularies,
+IDF weights, medians, the price clip value, the colour vocabulary, and the standardization
+mean/variance) are saved to a single \texttt{.npz} file (476KB, well under the 10MB limit);
+prediction at runtime is one numpy matrix product followed by an \texttt{argmax} -- no exponential
+is needed, since softmax is a monotonic function of the logits and therefore does not change which
+class has the highest score. We verified that \texttt{pred.py}'s pure-numpy output matches a direct
+reconstruction of the saved parameters exactly on all 870 training rows.
+
+\textbf{Random forest.} \todo{PLEASE do this}
+
+\textbf{MLP.} \todo{PLEASE DO THIS}
+
+\subsection{Hyperparameter tuning}
+
+Every family is tuned on the same 15 folds with the same selection criterion (mean cross-validation
+accuracy, macro-F1 as a tie-break) before the three families are compared against each other, so no
+family is compared at its default settings. Our proposal's plan only swept the text-representation
+hyperparameters (\texttt{min\_df}, \texttt{vocab\_cap}, weighting) for logistic regression and
+implicitly carried that single choice over to the other two families; here, each family instead
+sweeps the same text-hyperparameter grid jointly with its own model hyperparameters, exactly as
+logistic regression's 312-configuration grid already does below, so the text representation is
+re-justified for each family rather than inherited.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+Model & Hyperparameter & Values searched \\
+\midrule
+Logistic reg. & $C=1/\lambda$; penalty & 13 log-spaced values from $10^{-4}$ to $10$; L1, L2
+(full grid, 26 combinations) \\
+ & text \texttt{min\_df}; \texttt{vocab\_cap}; weighting & $\{2,3,5\}$; $\{100,300\}$; word count
+vs.\ TF-IDF (12 combinations) \\
+Random forest & \todo{teammate: trees; max depth} & \todo{teammate: values searched} \\
+ & \todo{teammate: min samples/leaf; max features} & \todo{teammate: values / search strategy} \\
+MLP & \todo{teammate: layers $\times$ width; learning rate} & \todo{teammate: values searched} \\
+ & \todo{teammate: weight decay; dropout} & \todo{teammate: values / search strategy} \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameter grids. For logistic regression, the full grid is $13 \times 2$ model
+hyperparameters $\times\ 3 \times 2 \times 2$ text hyperparameters $= 312$ configurations,
+evaluated on the same 15 cross-validation folds (4{,}680 individual model fits in total). We
+restructured the search so the feature-preprocessing step (the expensive part for a given text
+configuration) runs once per (text-hyperparameters, fold) pair and is reused across all 26
+model-hyperparameter combinations on that pair, rather than being recomputed 312 times per fold.}
+\label{tab:grids}
+\end{table}
+
+Ranges are chosen relative to the training-plus-validation pool ($n=741$) and the feature count
+($p\approx370$--$700$ depending on the text hyperparameters), not justified only by being
+log-spaced: the random forest's \texttt{min\_samples\_leaf} grid $\{1,2,5,10\}$ spans from a leaf
+that can fit a single row (a memorization risk given $p\approx n$) to a leaf covering roughly 1.3\%
+of the pool, and \texttt{max\_features}'s $\{\sqrt p, 0.1p, 0.3p\}$ spans roughly 20--30 features
+per split up to $\sim$200, deliberately bracketing the heavy-regularization regime the logistic
+regression results below already show is necessary at this $n$-to-$p$ ratio. The MLP's hidden
+widths $\{32,64,128\}$ are kept well below $p$ for the same reason, rather than scaled up to match
+or exceed the input dimensionality.
+
+\textbf{Logistic regression results.} Table~\ref{tab:cv-results} shows the ten best configurations
+by mean cross-validation accuracy out of all 312. The best configuration is L1-penalized
+($C\approx0.0825$), uses raw word counts rather than TF-IDF, and keeps words appearing in at least
+2 training rows (\texttt{min\_df}=2) with up to 300 per question. Several L1 configurations near
+$C \in [0.08, 0.22]$ are within one fold standard deviation of each other and of the TF-IDF
+variants at the same $C$, consistent with the text weighting scheme mattering much less than the
+regularization strength once both are tuned -- the fold-to-fold standard deviation
+($\sim$0.035--0.04) is larger than the gap between the top several rows, so we would not claim the
+single best row is meaningfully better than its closest competitors, only that this region of the
+grid (moderately strong L1 regularization) is clearly best.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}rrlrlrrr@{}}
+\toprule
+\texttt{min\_df} & \texttt{vocab\_cap} & weighting & $C$ & penalty & mean acc. & std.\ acc. &
+mean F1 \\
+\midrule
+2 & 300 & count & 0.0825 & L1 & 0.9147 & 0.0345 & 0.9145 \\
+3 & 100 & TF-IDF & 0.0825 & L1 & 0.9146 & 0.0378 & 0.9143 \\
+2 & 100 & count & 0.0825 & L1 & 0.9146 & 0.0368 & 0.9143 \\
+3 & 100 & TF-IDF & 0.2154 & L1 & 0.9146 & 0.0373 & 0.9143 \\
+2 & 100 & TF-IDF & 0.2154 & L1 & 0.9133 & 0.0361 & 0.9131 \\
+2 & 100 & TF-IDF & 0.0825 & L1 & 0.9133 & 0.0356 & 0.9131 \\
+3 & 100 & count & 0.0825 & L1 & 0.9133 & 0.0380 & 0.9130 \\
+3 & 300 & count & 0.0825 & L1 & 0.9133 & 0.0380 & 0.9130 \\
+\bottomrule
+\end{tabular}
+\caption{Top 8 of 312 logistic-regression configurations by mean 15-fold cross-validation
+accuracy. The chosen configuration (first row) is used for the final retrain and locked-test
+evaluation in Section~\ref{sec:results}.}
+\label{tab:cv-results}
+\end{table}
+
+\textbf{Random forest results.} \todo{teammate to fill in: best hyperparameters found, a short
+table of the top configurations, and a one-sentence comment on how sensitive accuracy was to each
+hyperparameter.}
+
+\textbf{MLP results.} \todo{teammate to fill in: best hyperparameters found, a short table or
+learning-curve plot, and a comment on overfitting behaviour across the epoch budget.}
+
+\subsection{Comparing families and evaluation metrics}
+
+Each family's best configuration will be evaluated on the same 15 folds; since the folds are
+shared across families, we compare the \emph{per-fold} accuracy difference between two models
+rather than only the mean, and treat a difference smaller than the fold-to-fold standard
+deviation as a tie, preferring the simpler and more stable model in that case.
+\todo{teammate: once random forest and MLP cross-validation results are available, fill in the
+actual family-vs-family comparison here (a table or plot of the three families' per-fold scores),
+state whether any pair is a statistical tie, and note whether a soft-voting ensemble was tried.}
+
+\begin{itemize}
+\item \textbf{Accuracy}: the metric used for grading; meaningful here because the classes are
+exactly balanced.
+\item \textbf{Macro-F1}: per-class precision $TP_k/(TP_k+FP_k)$ and recall
+$TP_k/(TP_k+FN_k)$ combined into $F1_k$ and averaged with equal weight across the three classes.
+It exposes a model that performs well overall but fails on one specific sport; with exactly
+balanced classes the macro and weighted averages coincide.
+\item \textbf{Confusion matrix and per-class precision/recall}, to see which sports are
+confused with each other.
+\item \textbf{Log-loss} on the held-out folds, to check the quality of the predicted
+probabilities (useful if an ensemble across families is attempted).
+\end{itemize}
+
+\subsection{Additional techniques considered}
+
+Word bigrams, merging spelling variants, and removing the near-constant multi-select options
+(\emph{Summer}, \emph{Outdoor public space}) were considered for the text/categorical features but
+not pursued for the final logistic regression model, since L1/L2 regularization already shrinks
+the weight of uninformative columns automatically and the simpler, fully-standardized feature set
+already reaches the accuracy reported in Section~\ref{sec:results}. The random forest's collapsed
+text representation and the MLP's PCA input reduction (Section~\ref{sec:methodology}, Training
+details) are the analogous additional techniques for those two families, and are reported as part
+of their own results rather than repeated here.
+\todo{teammate: note any further additional techniques actually tried for random forest / MLP
+beyond the two above, with the result.}
+
+\section{Results}\label{sec:results}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Model & CV accuracy (mean $\pm$ std) & Locked test accuracy & Locked test macro-F1 \\
+\midrule
+Logistic regression (L1) & $0.915 \pm 0.035$ & \textbf{0.907} & \textbf{0.905} \\
+Random forest & \todo{teammate} & \todo{teammate} & \todo{teammate} \\
+MLP & \todo{teammate} & \todo{teammate} & \todo{teammate} \\
+\bottomrule
+\end{tabular}
+\caption{Comparison across the three model families. The logistic regression row is final; the
+other two rows are pending the respective teammate's results.}
+\label{tab:final-comparison}
+\end{table}
+
+The chosen logistic regression configuration (\texttt{min\_df}=2, \texttt{vocab\_cap}=300, word
+counts, L1, $C\approx0.0825$) was retrained once on the 741 train-plus-validation rows and
+evaluated once on the 129-row locked test set, giving \textbf{90.7\% accuracy}, macro-F1
+\textbf{0.905}, and log-loss \textbf{0.283}. Table~\ref{tab:confusion} shows the confusion matrix.
+Baseball is predicted with perfect recall (every true Baseball row was classified correctly) but
+only 0.84 precision, because 6 Soccer rows and 2 Basketball rows were misclassified as Baseball.
+Soccer has the lowest recall (0.77): 6 Soccer rows were predicted Baseball and 4 were predicted
+Basketball, so Soccer is where this model is weakest, somewhat contrary to our data-exploration
+expectation that Basketball and Soccer (whose ease/injury/price profiles are closer to each other)
+would be the most confused pair.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+True $\backslash$ Predicted & Baseball & Basketball & Soccer \\
+\midrule
+Baseball & 43 & 0 & 0 \\
+Basketball & 2 & 41 & 0 \\
+Soccer & 6 & 4 & 33 \\
+\bottomrule
+\end{tabular}
+\caption{Confusion matrix on the locked 129-row test set (43 rows per class). Rows are the true
+label, columns are the predicted label.}
+\label{tab:confusion}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Class & Precision & Recall & F1 \\
+\midrule
+Baseball & 0.84 & 1.00 & 0.91 \\
+Basketball & 0.91 & 0.95 & 0.93 \\
+Soccer & 1.00 & 0.77 & 0.87 \\
+\bottomrule
+\end{tabular}
+\caption{Per-class precision/recall/F1 on the locked test set for the final logistic regression
+model.}
+\label{tab:perclass}
+\end{table}
+
+\todo{teammate: add the random forest and MLP confusion matrices / per-class reports here, and a
+short comparison of which misclassification patterns are shared across all three families versus
+unique to one of them.}
+
+\textbf{Final single-number test-accuracy estimate.} \todo{Once all three families are compared
+(Table~\ref{tab:final-comparison}), state the single chosen final model here and justify the
+estimate with evidence (e.g., consistency between the 15-fold cross-validation mean/std and the
+one-shot locked-test accuracy). If logistic regression remains the chosen family, our current
+evidence is: CV mean accuracy $0.915$ with fold standard deviation $0.035$, and a locked-test
+accuracy of $0.907$ that falls well within that range, so we estimate the hidden-test-set accuracy
+at approximately \textbf{90--91\%}.}
+
+% ================================================
+% Contributions and Learning
+% ================================================
+\section{Contributions and Learning}
+
+\begin{itemize}
+\item \textbf{Shubham Mohta (logistic regression):} Built the shared feature-engineering
+module and the softmax regression training/tuning pipeline, including the grouped repeated
+cross-validation search over 312 hyperparameter configurations and the numpy-only \texttt{pred.py}
+deployment path. The most important lesson was that correctness checks need to be concrete and
+automated (e.g.\ comparing \texttt{pred.py}'s output against a manual reconstruction of the saved
+parameters on every row) rather than assumed, since a silent mismatch between training-time and
+prediction-time features would have been invisible until the hidden test set.
+\item \textbf{\todo{teammate 2} (random forest):} \todo{3 sentences on their contribution and
+main lesson learned.}
+\item \textbf{\todo{teammate 3} (MLP):} \todo{3 sentences on their contribution and main lesson
+learned.}
+\item \textbf{\todo{teammate 4}:} \todo{3 sentences on their contribution and main lesson
+learned -- e.g.\ data exploration, report writing, or a shared responsibility.}
+\end{itemize}
+
+% ==================================================
+% References
+% ==================================================
+\section{References}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
