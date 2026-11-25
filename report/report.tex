@@ -149,8 +149,8 @@ Ease of starting (0--10) & numeric & 0.0\% & median impute, standardize \\
 Strategy / injury / individual & Likert, 5-pt & 0.0\% & ordinal 1--5, standardize \\
 Place / season / music & multi-select & 0.0\% & multi-hot, 21 binary \\
 Colour & short text & 1.0\% & top-10 one-hot + other + flag \\
-Food, song, feeling & free text & 2.6 / 9.2 / 0.3\% & TF-IDF per question \\
-Price for a seat & text (number) & 1.6\% + 2.3\% unparsed & parse, $\log(1+\$)$, clip, flag \\
+Food, song, feeling & free text & 2.6/9.2/0.3\% & TF-IDF per question \\
+Price for a seat & text (number) & 1.6\%+2.3\% & parse, $\log(1+\$)$, clip, flag \\&&unparsed&\\
 \bottomrule
 \end{tabular}
 \caption{Features (training split only). ``Missing'' counts null, empty, ``n/a'', ``-'', ``none''
