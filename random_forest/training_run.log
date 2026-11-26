@@ -1,0 +1,51 @@
+NumPy 1.26.4, pandas 2.2.3, scikit-learn 1.5.2
+CV pool: 741 rows / 247 respondents
+Locked test: 129 rows / 43 respondents
+Validation rows per fold: [150, 150, 147, 147, 147]
+Stage 1: text settings, representation, minimum leaf size, and max features.
+Stage 1 complete: 1440 fits in 35.6s
+Stage 2: depth and tree count for the top three settings per representation.
+318 configurations, 1590 fits in 45.3s.
+Top 10 configurations:
+ min_df  vocab_cap weighting representation  min_samples_leaf max_features  max_depth  n_estimators  mean_acc  std_acc  mean_f1  mean_log_loss
+      5        100     tfidf          words                 1          0.1         16            96  0.908082 0.022935 0.908000       0.343602
+      5        100     tfidf          words                 1          0.1         16           192  0.908054 0.024452 0.908000       0.347610
+      2        100     count          words                 1          0.1          0            96  0.908054 0.028733 0.907836       0.430031
+      2        100     tfidf          words                 1          0.1          0            96  0.906748 0.025635 0.906745       0.426647
+      2        100     tfidf          words                 1          0.1         16           192  0.906694 0.027934 0.906562       0.343597
+      5        100     tfidf          words                 1          0.1          0            96  0.906667 0.032549 0.906758       0.345079
+      5        300     tfidf          words                 1          0.1          0            96  0.906667 0.032549 0.906758       0.345079
+      2        100     tfidf          words                 1          0.1          0           192  0.906639 0.030728 0.906485       0.385169
+      2        100     count          words                 1         sqrt          0            96  0.905415 0.020383 0.905229       0.418782
+      2        300     count          words                 1          0.1          0            96  0.905361 0.029773 0.905180       0.383601
+Selected: {'min_df': 5, 'vocab_cap': 100, 'weighting': 'tfidf', 'representation': 'words', 'min_samples_leaf': 1, 'max_features': '0.1', 'max_depth': 16, 'n_estimators': 96}
+Selected fold metrics:
+ fold      acc       f1  log_loss
+    1 0.920000 0.919229  0.342304
+    2 0.933333 0.933039  0.302217
+    3 0.891156 0.890741  0.364608
+    4 0.918367 0.918902  0.330010
+    5 0.877551 0.878087  0.378872
+Locked-test fit:
+  Fitted on 741 rows with 267 input and 267 forest features.
+Locked-test acc: 0.922481
+Locked-test f1: 0.921594
+Locked-test log_loss: 0.329872
+Confusion matrix, rows=true and columns=predicted, order=['Baseball', 'Basketball', 'Soccer']:
+[[41  0  2]
+ [ 1 42  0]
+ [ 4  3 36]]
+              precision    recall  f1-score   support
+
+    Baseball     0.8913    0.9535    0.9213        43
+  Basketball     0.9333    0.9767    0.9545        43
+      Soccer     0.9474    0.8372    0.8889        43
+
+    accuracy                         0.9225       129
+   macro avg     0.9240    0.9225    0.9216       129
+weighted avg     0.9240    0.9225    0.9216       129
+
+Deployment fit:
+  Fitted on 870 rows with 290 input and 290 forest features.
+Saved forest_model.npz (245,982 bytes).
+Export verified against scikit-learn on all 870 rows.
