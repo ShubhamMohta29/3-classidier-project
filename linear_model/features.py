@@ -17,9 +17,7 @@ import re
 import numpy as np
 import pandas as pd
 
-# ---------------------------------------------------------------------------
-# Column names (verbatim from csc311_project_training_202609.csv's header)
-# ---------------------------------------------------------------------------
+# Column names
 ID_COL = "id"
 EASE_COL = (
     "How easy do you think it would be for someone with no prior experience "
