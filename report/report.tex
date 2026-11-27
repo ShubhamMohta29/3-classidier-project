@@ -125,8 +125,11 @@ L1-regularized model ($C \approx 0.0825$) using raw word-count text features rat
 The selected 192-tree random forest averaged \textbf{90.72\% accuracy} across the same 15
 validation runs. It reached \textbf{92.25\% accuracy} (macro-F1 0.922) on the previously
 used 129-row holdout.
-\todo{Add the MLP results and state which of the three families was chosen as the final model and
-why. Keep the executive summary within 1/4 page.}
+The MLP (two hidden layers of 128 units, dropout 0.3, weight decay 0.03) averaged
+\textbf{89.78\% accuracy} (std.\ 3.6 points) across the same 15 validation runs and reached
+\textbf{92.25\% accuracy} (macro-F1 0.922) on the locked 129-row test split. All three families
+are within one fold standard deviation of each other in cross-validation.
+\todo{Team: state which family is the final model and why.}
 
 \section{Data Exploration}\label{sec:data-exploration}
 
@@ -378,7 +381,21 @@ and minimum leaf size control complexity. The forest predicts the class with the
 leaf probability across trees. We exported split features, thresholds, child indices, leaf
 probabilities, and fitted preprocessing to a compressed NumPy archive. The exported probabilities matched scikit-learn within $10^{-12}$ on all 870 rows.
 
-\textbf{MLP.} \todo{PLEASE DO THIS}
+\textbf{MLP.} We trained a PyTorch multilayer perceptron on the encoded survey responses. In each
+student-grouped fold, we fitted the preprocessor on the training rows only and used it to transform
+both the training and validation rows, giving $p\approx378$ standardized inputs. The selected model
+has two hidden layers of 128 units, each with ReLU activation and dropout 0.3; its output layer
+produces three scores, one per sport. We trained with cross-entropy loss and Adam using batches of
+32, a learning rate of 0.001 and weight decay of 0.03. We allowed up to 300 epochs and stopped after
+20 consecutive epochs without improvement in validation loss, restoring the weights from the epoch
+with the lowest validation loss. Seeds are fixed (311, 312, 313) and each fold's score is the mean
+over the three seeds. The text features use one fixed setting (\texttt{min\_df}=3,
+\texttt{vocab\_cap}=300, TF-IDF); unlike the other two families, we did not search the text settings
+for the MLP. The final model has no held-out set to stop on, so it is retrained on all rows for a
+fixed 7 epochs, the median best epoch across the 15 cross-validation folds. For \texttt{pred.py} we
+save every weight matrix, bias vector and fitted preprocessor statistic to one \texttt{.npz} file
+(0.72\,MB) and re-implement the forward pass in numpy; its logits match PyTorch's to within
+$4\times10^{-15}$ on the test rows.
 
 \subsection{Hyperparameter tuning}
 
@@ -405,8 +422,12 @@ Random forest & Trees and depth & $\{96,192\}$ trees and depths $\{8,16,\text{un
  & Leaf size and features & $\{1,2,5,10\}$ rows per leaf and $\{\sqrt p,0.1p,0.3p\}$
 candidate features per split \\
  & Text & Same 12 text options as logistic regression, crossed with all 72 forest settings \\
-MLP & \todo{teammate: layers $\times$ width; learning rate} & \todo{teammate: values searched} \\
- & \todo{teammate: weight decay; dropout} & \todo{teammate: values / search strategy} \\
+MLP & Hidden layers $\times$ width; Adam learning rate & Round 1: $\{1,2\}\times\{32,64,128\}$;
+$\{3\!\cdot\!10^{-4},10^{-3}\}$. Round 2 (extended): $\{1,2,3\}\times\{16,32,64,128\}$;
+$\{10^{-4},3\!\cdot\!10^{-4},10^{-3}\}$ \\
+ & Weight decay; dropout & Round 1: $\{10^{-4},10^{-3},10^{-2}\}$; $\{0,0.3,0.5\}$.
+Round 2: $\{10^{-3},10^{-2},3\!\cdot\!10^{-2},10^{-1}\}$; $\{0,0.3,0.5,0.6\}$.
+Random search, 40 configurations per round \\
 \bottomrule
 \end{tabularx}
 \caption{Joint hyperparameter grids. The logistic search produced 4,680 validation scores
@@ -414,8 +435,11 @@ and the forest search produced 12,960.}
 \label{tab:grids}
 \end{table}
 
-To limit capacity, the MLP's hidden widths $\{32,64,128\}$ are kept well below the input
-dimensionality $p$.
+To limit capacity, the MLP's hidden widths (at most 128) are kept well below the input
+dimensionality $p$. Because training a network is slower than fitting the other models, each MLP
+configuration was scored on the five folds of the first respondent shuffling with a single seed
+(40 configurations $\times$ 5 folds per round); only the final configuration was scored on all 15
+folds with 3 seeds.
 
 \textbf{Logistic regression results.} Table~\ref{tab:cv-results} shows the ten best configurations
 by mean cross-validation accuracy out of all 312. The best configuration is L1-penalized
@@ -479,8 +503,43 @@ per split, and the 96-tree model uses $0.1p$. All four use a minimum leaf size o
 \label{tab:forest-review}
 \end{table}
 
-\textbf{MLP results.} \todo{teammate to fill in: best hyperparameters found, a short table or
-learning-curve plot, and a comment on overfitting behaviour across the epoch budget.}
+\textbf{MLP results.} The first round of 40 configurations reached at most 90.1\% mean accuracy,
+and its best values for layers, width, learning rate, weight decay and dropout all sat at the edge of
+their ranges, so we extended each range once, as planned. In the second round the best layer count (2),
+weight decay (0.03) and dropout (0.3) fell inside their ranges, while the best width (128) and learning
+rate ($10^{-3}$) sit at the maxima of the proposal's grid, where we stopped. The selected configuration
+has two hidden layers of 128 units, learning rate $10^{-3}$, weight decay 0.03 and dropout 0.3
+(Table~\ref{tab:mlp-grid}).
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}rrrrrrr@{}}
+\toprule
+Layers & Width & LR & Weight decay & Dropout & Mean acc. & Best epoch \\
+\midrule
+2 & 128 & $10^{-3}$ & 0.03 & 0.3 & 0.9053 & 11.8 \\
+2 & 32 & $10^{-4}$ & 0.01 & 0.6 & 0.9000 & 154.6 \\
+3 & 128 & $10^{-3}$ & 0.01 & 0.6 & 0.9000 & 8.6 \\
+\bottomrule
+\end{tabular}
+\caption{Top 3 of the 40 round-2 MLP configurations by mean 5-fold accuracy (first shuffling, one
+seed). The first row was selected. Rescoring it on all 15 folds with 3 seeds gives
+$0.898\pm0.036$, slightly below its tuning score, as expected when the best of many noisy
+configurations is chosen.}
+\label{tab:mlp-grid}
+\end{table}
+
+The top configurations are within about half a point of each other, far less than the 3-point
+fold-to-fold standard deviation, so we do not claim the selected row is meaningfully better than
+the next few. Two behaviours are clear. First, the network overfits quickly: the selected
+configuration reaches its best held-out loss after only about 12 epochs (7 at the median over the 15
+final folds), and training for the full 300-epoch budget would only memorize the 741 rows. Early stopping
+and weight decay therefore matter more than width. Second, too much regularization breaks training:
+the two configurations with weight decay 0.1 and three hidden layers collapsed to 33--39\% accuracy,
+close to chance, which is why the weight-decay range was not extended beyond 0.1. Early stopping
+uses the held-out fold's loss, so the cross-validation figures are slightly optimistic; the locked-test
+number is not affected because the final model trains for a fixed epoch count.
 
 \subsection{Comparing families and evaluation metrics}
 
@@ -520,7 +579,9 @@ while leaving individual song words intact, gave 90.45\% mean accuracy. Removing
 columns lowered mean accuracy from 90.72\% to 86.77\%. The decrease occurred in all 15 runs
 and averaged 3.95 percentage points, supporting the use of individual song-word features.
 
-\todo{Document any additional techniques used for the MLP, including PCA if tested.}
+\textbf{MLP.} We did not try PCA or word bigrams for the MLP, and its text settings were not searched,
+so its features are the shared defaults rather than the logistic regression's tuned counts. These are
+untested options, and could change the MLP's ranking.
 
 \section{Results}\label{sec:results}
 
@@ -533,12 +594,12 @@ Model & \shortstack[r]{CV accuracy\\(mean $\pm$ std)}
 \midrule
 Logistic regression (L1) & $0.915 \pm 0.035$ & \textbf{0.907} & \textbf{0.905} \\
 Random forest (192 trees) & $0.907 \pm 0.023$ & 0.922 & 0.922 \\
-MLP & \todo{teammate} & \todo{teammate} & \todo{teammate} \\
+MLP & $0.898 \pm 0.036$ & 0.923 & 0.922 \\
 \bottomrule
 \end{tabularx}
 \caption{Results by model family. Logistic regression and the forest use the same 15
 validation runs. The forest holdout result reuses the previously evaluated split. The MLP row
-is pending.}
+uses the same 15 folds, averaged over 3 seeds.}
 \label{tab:final-comparison}
 \end{table}
 
@@ -614,7 +675,31 @@ Soccer had the lowest recall for the forest (0.837). Four Soccer answers were pr
 Baseball and three as Basketball. The grouped validation mean supports a forest accuracy estimate
 of about 91\% on new respondents.
 
-\todo{Add the MLP confusion matrix and compare error patterns once all three results are available.}
+The MLP was retrained on the 741 development rows for 7 epochs and scored once on the 129-row locked
+test set: 119 correct (\textbf{92.25\%}), macro-F1 \textbf{0.922}. Its errors are spread thinly
+(Table~\ref{tab:mlp-confusion}); Soccer again has the lowest recall (0.88), and the largest single
+error is Soccer predicted as Basketball (4 rows), the pair our data exploration expected to be most
+confused. The logistic regression's Soccer errors went mostly to Baseball, and the forest's to both.
+With 129 test rows one standard error is about 2.4 points, so the 92.25\% (MLP and forest) versus
+90.7\% (logistic regression) test gap is within noise.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{Predicted sport} & \multicolumn{3}{c}{Per-class metrics} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+True sport & Baseball & Basketball & Soccer & Precision & Recall & F1 \\
+\midrule
+Baseball & 41 & 1 & 1 & 0.95 & 0.95 & 0.95 \\
+Basketball & 1 & 40 & 2 & 0.89 & 0.93 & 0.91 \\
+Soccer & 1 & 4 & 38 & 0.93 & 0.88 & 0.90 \\
+\bottomrule
+\end{tabular}
+\caption{Locked-test confusion matrix and per-class metrics for the MLP.}
+\label{tab:mlp-confusion}
+\end{table}
 
 \textbf{Final single-number test-accuracy estimate.} \todo{Once all three families are compared
 (Table~\ref{tab:final-comparison}), state the single chosen final model here and justify the
@@ -639,8 +724,11 @@ parameters on every row) rather than assumed, since a silent mismatch between tr
 prediction-time features would have been invisible until the hidden test set.
 \item \textbf{\todo{teammate 2} (random forest):} \todo{3 sentences on their contribution and
 main lesson learned.}
-\item \textbf{\todo{teammate 3 and teammate 4} (MLP):} \todo{3 sentences on their contribution and main lesson
-learned.}
+\item \textbf{\todo{Xinyue Li and teammate 4} (MLP):} Built the MLP pipeline: the random search over layers, width, learning
+rate, weight decay and dropout on the shared grouped folds, the 15-fold final evaluation, and the numpy-only
+\texttt{pred.py} with a check that it matches PyTorch. The main lesson was that with only 741 rows the network
+overfits within a dozen epochs, so early stopping, weight decay and a fair comparison on shared folds mattered more than
+model size.
 \end{itemize}
 
 \end{document}
