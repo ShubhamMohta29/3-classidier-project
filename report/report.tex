@@ -722,8 +722,11 @@ deployment path. The most important lesson was that correctness checks need to b
 automated (e.g.\ comparing \texttt{pred.py}'s output against a manual reconstruction of the saved
 parameters on every row) rather than assumed, since a silent mismatch between training-time and
 prediction-time features would have been invisible until the hidden test set.
-\item \textbf{\todo{teammate 2} (random forest):} \todo{3 sentences on their contribution and
-main lesson learned.}
+\item \textbf{Jenny Yang (random forest):} Built the joint tuning of forest settings and text
+features on the same validation runs as logistic regression and verified the exported NumPy
+predictor. To investigate the proposal feedback about sparse song words, removed the
+song features while keeping the selected model settings fixed. The accuracy fell in all 15 runs
+and by 3.95 percentage points on average, giving the team a reason to keep those features.
 \item \textbf{\todo{Xinyue Li and teammate 4} (MLP):} Built the MLP pipeline: the random search over layers, width, learning
 rate, weight decay and dropout on the shared grouped folds, the 15-fold final evaluation, and the numpy-only
 \texttt{pred.py} with a check that it matches PyTorch. The main lesson was that with only 741 rows the network
