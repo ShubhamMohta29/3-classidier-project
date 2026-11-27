@@ -390,8 +390,8 @@ produces three scores, one per sport. We trained with cross-entropy loss and Ada
 20 consecutive epochs without improvement in validation loss, restoring the weights from the epoch
 with the lowest validation loss. Seeds are fixed (311, 312, 313) and each fold's score is the mean
 over the three seeds. The text features use one fixed setting (\texttt{min\_df}=3,
-\texttt{vocab\_cap}=300, TF-IDF); unlike the other two families, we did not search the text settings
-for the MLP. The final model has no held-out set to stop on, so it is retrained on all rows for a
+\texttt{vocab\_cap}=300, TF-IDF) in the main search; a separate check over the other text settings
+is described below. The final model has no held-out set to stop on, so it is retrained on all rows for a
 fixed 7 epochs, the median best epoch across the 15 cross-validation folds. For \texttt{pred.py} we
 save every weight matrix, bias vector and fitted preprocessor statistic to one \texttt{.npz} file
 (0.72\,MB) and re-implement the forward pass in numpy; its logits match PyTorch's to within
@@ -539,7 +539,12 @@ and weight decay therefore matter more than width. Second, too much regularizati
 the two configurations with weight decay 0.1 and three hidden layers collapsed to 33--39\% accuracy,
 close to chance, which is why the weight-decay range was not extended beyond 0.1. Early stopping
 uses the held-out fold's loss, so the cross-validation figures are slightly optimistic; the locked-test
-number is not affected because the final model trains for a fixed epoch count.
+number is not affected because the final model trains for a fixed epoch count. As a robustness check for 
+the proposal feedback on text preprocessing, we also searched the same 12 text settings (minimum document 
+frequency 2/3/5, vocabulary cap 100/300, TF-IDF or counts) for the MLP, re-tuning its hyperparameters 
+under each. The best setting (minimum document frequency 3, cap 100, counts) reached $0.903 \pm 0.030$ 
+cross-validated accuracy and $0.907$ on the locked test set, not meaningfully different from our fixed 
+setting ($0.898 \pm 0.036$ and $0.923$), so we kept the original MLP.
 
 \subsection{Comparing families and evaluation metrics}
 
@@ -579,10 +584,9 @@ while leaving individual song words intact, gave 90.45\% mean accuracy. Removing
 columns lowered mean accuracy from 90.72\% to 86.77\%. The decrease occurred in all 15 runs
 and averaged 3.95 percentage points, supporting the use of individual song-word features.
 
-\textbf{MLP.} We did not try PCA or word bigrams for the MLP, and its text settings were not searched,
-so its features are the shared defaults rather than the logistic regression's tuned counts. These are
-untested options, and could change the MLP's ranking.
-
+\textbf{MLP.} We did not try PCA or word bigrams for the MLP. Its text settings were searched
+once as a check (see the hyperparameter tuning section) and made no meaningful difference. The
+untested options could still change the MLP's ranking.
 \section{Results}\label{sec:results}
 
 \begin{table}[h]
