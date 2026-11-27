@@ -1,0 +1,31 @@
+Seed 311, 15 distinct validation folds, 741 development rows.
+Proposal random search complete (64.6s).
+proposal_extension CV complete (79.6s).
+alternative CV complete (111.6s).
+115 configurations, 1725 CV fits, submission sizes 89,590–2,848,863 bytes.
+Best per search:
+ min_df  vocab_cap weighting representation  min_samples_leaf max_features  max_depth  n_estimators  mean_acc  std_acc  mean_f1  mean_log_loss  oob_acc  submission_bytes             search
+      3        300     tfidf          words                 1         sqrt         30           500  0.907274 0.028899 0.907027       0.393330 0.893387           1587937           proposal
+      3        300     tfidf          words                 1         0.03         30           750  0.907265 0.030239 0.907136       0.414307 0.885290           2804611 proposal_extension
+      2        100     count          words                 1          0.1          0            96  0.904998 0.028983 0.904789       0.416834 0.890688            254523        alternative
+Best song-focused model:
+ min_df  vocab_cap weighting representation  min_samples_leaf max_features  max_depth  n_estimators  mean_acc  std_acc  mean_f1  mean_log_loss  oob_acc  submission_bytes      search
+      3        100     tfidf     song_words                 1          0.1         16            96   0.90137 0.030016 0.901137       0.391407 0.875843            261598 alternative
+Overall CV winner:
+min_df                     3
+vocab_cap                300
+weighting              tfidf
+representation         words
+min_samples_leaf           1
+max_features            sqrt
+max_depth                 30
+n_estimators             500
+mean_acc            0.907274
+std_acc             0.028899
+mean_f1             0.907027
+mean_log_loss        0.39333
+oob_acc             0.893387
+submission_bytes     1587937
+search              proposal
+Same settings without song: 0.873107 mean CV accuracy. Paired change with song: +0.034168.
+Export verified against scikit-learn on all 870 rows.

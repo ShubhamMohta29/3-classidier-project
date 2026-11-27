@@ -10,6 +10,7 @@
 \usepackage{parskip}         % blank line between paragraphs, no indent
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{amsmath, amssymb}
 \usepackage{siunitx}
 \usepackage[hidelinks]{hyperref}
@@ -33,6 +34,8 @@
 \captionsetup{font=small, labelfont=bf}
 \setlist[itemize]{noitemsep, topsep=2pt}
 \setlist[enumerate]{noitemsep, topsep=2pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
 % ---------- Helpful macros ----------
 \newcommand{\bestmodel}{\textit{[Best Model Name -- TODO once random forest / MLP results are in]}}
@@ -98,7 +101,7 @@
     {\large \todo{group number}}
 
     \vspace{0.5cm}
-    {\large \todo{Shubham Mohta, Student 2, Student 3, Student 4} \par}
+    {\large \todo{Shubham Mohta, Jenny Yang, Student 3, Student 4} \par}
 
     \vfill
     {\large University of Toronto \\ Fall 2026 \par}
@@ -119,9 +122,11 @@ Our fully tuned logistic regression model, selected by grouped 5-fold cross-vali
 3 times, 15 folds total) over a 312-point hyperparameter grid, reaches \textbf{90.7\% accuracy}
 (macro-F1 0.905) on a 129-row test split that was held out and touched only once. It is an
 L1-regularized model ($C \approx 0.0825$) using raw word-count text features rather than TF-IDF.
-\todo{Fill in the random forest and MLP summary numbers here once those teammates' final
-results are in, then state which of the three families was chosen as the final model and why --
-this paragraph must not exceed 1/4 page.}
+The selected 192-tree random forest averaged \textbf{90.72\% accuracy} across the same 15
+validation runs. It reached \textbf{92.25\% accuracy} (macro-F1 0.922) on the previously
+used 129-row holdout.
+\todo{Add the MLP results and state which of the three families was chosen as the final model and
+why. Keep the executive summary within 1/4 page.}
 
 \section{Data Exploration}\label{sec:data-exploration}
 
@@ -141,7 +146,7 @@ are not fitted to data we evaluate on later.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{@{}llrl@{}}
+\begin{tabularx}{\linewidth}{@{}L{0.29\linewidth}L{0.18\linewidth}L{0.20\linewidth}Y@{}}
 \toprule
 Question & Type & Missing & Encoding \\
 \midrule
@@ -152,7 +157,7 @@ Colour & short text & 1.0\% & top-10 one-hot + other + flag \\
 Food, song, feeling & free text & 2.6/9.2/0.3\% & TF-IDF per question \\
 Price for a seat & text (number) & 1.6\%+2.3\% & parse, $\log(1+\$)$, clip, flag \\&&unparsed&\\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{Features (training split only). ``Missing'' counts null, empty, ``n/a'', ``-'', ``none''
 after normalizing them to a single marker.}
 \label{tab:features}
@@ -321,18 +326,23 @@ runtime dependency.}
 
 \subsection{Validation protocol}
 
-The 43 test respondents (129 rows) stay locked until the single final estimate in
+We saved the 43 test respondents (129 rows) for the holdout evaluations in
 Section~\ref{sec:results}. The other 247 respondents (741 rows) are used for hyperparameter
 tuning with grouped 5-fold cross-validation (\texttt{GroupKFold} on respondent \texttt{id}), so a
-person's rows are never split between a training fold and its held-out fold. Because
-\texttt{GroupKFold} has no built-in shuffling, we obtain 3 independent respondent shufflings by
-permuting row order before each repeat (fixed seeds 311, 312, 313), giving 15 fold scores per
-hyperparameter configuration -- a single 129-row validation split has a standard error of roughly
-2.6 points at 90\% accuracy, too noisy on its own to compare configurations reliably. To avoid
+person's rows are never split between a training fold and its held-out fold. The original
+logistic regression search produced 15 scores per configuration by permuting row order before
+each repeat (seeds 311, 312, 313). These permutations preserved the same five respondent groups.
+To avoid
 leakage, the entire preprocessor from Section~\ref{sec:data-exploration} (medians, the price clip
 value, the colour vocabulary, text vocabularies and IDF weights, and the standardization
 mean/variance) is re-fit independently on each fold's training partition and applied unchanged to
 that fold's held-out partition.
+
+\textbf{Random forest validation.} We used the same 15 training and validation runs as the
+logistic regression search, including its row order for each seed. The three passes share
+five respondent groups, each with 49 or 50 respondents, so the variation across the 15 scores
+describes the runs on those groups. The forest search fit preprocessing on each training
+partition and selected its settings using development rows.
 
 \subsection{Training details}
 
@@ -345,9 +355,8 @@ cross-entropy loss is convex, so the fitted model does not depend on initializat
 Section~\ref{sec:data-exploration}'s exploratory pipeline check used a fixed text configuration
 (\texttt{min\_df}=3, \texttt{vocab\_cap}=300, TF-IDF, giving $p=372$) purely for illustration; the
 tuning below instead searches \texttt{min\_df}, \texttt{vocab\_cap} and the TF-IDF-vs-count choice
-jointly with $C$ and the penalty, rather than fixing the text configuration in advance and
-inheriting it into the other two families -- each family below performs this same joint sweep
-independently rather than reusing logistic regression's choice. For \texttt{pred.py}, the
+jointly with $C$ and the penalty. The random forest also tunes those three text settings
+with its own model parameters. For \texttt{pred.py}, the
 $3 \times p$ weight matrix, the bias vector, and every fitted preprocessor statistic (vocabularies,
 IDF weights, medians, the price clip value, the colour vocabulary, and the standardization
 mean/variance) are saved to a single \texttt{.npz} file (476KB, well under the 10MB limit);
@@ -356,7 +365,18 @@ is needed, since softmax is a monotonic function of the logits and therefore doe
 class has the highest score. We verified that \texttt{pred.py}'s pure-numpy output matches a direct
 reconstruction of the saved parameters exactly on all 870 training rows.
 
-\textbf{Random forest.} \todo{PLEASE do this}
+\textbf{Random forest.} Basketball accounts for 85\% of responses selecting both Indoor
+facility and Winter, compared with 32\% for Indoor alone (Table~\ref{tab:interaction}). A tree
+can capture this interaction by splitting first on Indoor and then on Winter within that branch.
+To address the sparse song-word signal, we varied the number of candidate features per split
+and tested a text representation that preserves individual song words
+(Section~\ref{sec:forest-text}).
+
+We fit scikit-learn's \texttt{RandomForestClassifier}~\cite{pedregosa2011scikit} with seed 311.
+Each tree grows on a bootstrap sample, choosing splits that reduce Gini impurity. Maximum depth
+and minimum leaf size control complexity. The forest predicts the class with the largest average
+leaf probability across trees. We exported split features, thresholds, child indices, leaf
+probabilities, and fitted preprocessing to a compressed NumPy archive. The exported probabilities matched scikit-learn within $10^{-12}$ on all 870 rows.
 
 \textbf{MLP.} \todo{PLEASE DO THIS}
 
@@ -373,7 +393,7 @@ re-justified for each family rather than inherited.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{@{}llp{7cm}@{}}
+\begin{tabularx}{\linewidth}{@{}L{0.19\linewidth}L{0.33\linewidth}Y@{}}
 \toprule
 Model & Hyperparameter & Values searched \\
 \midrule
@@ -381,30 +401,21 @@ Logistic reg. & $C=1/\lambda$; penalty & 13 log-spaced values from $10^{-4}$ to 
 (full grid, 26 combinations) \\
  & text \texttt{min\_df}; \texttt{vocab\_cap}; weighting & $\{2,3,5\}$; $\{100,300\}$; word count
 vs.\ TF-IDF (12 combinations) \\
-Random forest & \todo{teammate: trees; max depth} & \todo{teammate: values searched} \\
- & \todo{teammate: min samples/leaf; max features} & \todo{teammate: values / search strategy} \\
+Random forest & Trees and depth & $\{96,192\}$ trees and depths $\{8,16,\text{unlimited}\}$ \\
+ & Leaf size and features & $\{1,2,5,10\}$ rows per leaf and $\{\sqrt p,0.1p,0.3p\}$
+candidate features per split \\
+ & Text & Same 12 text options as logistic regression, crossed with all 72 forest settings \\
 MLP & \todo{teammate: layers $\times$ width; learning rate} & \todo{teammate: values searched} \\
  & \todo{teammate: weight decay; dropout} & \todo{teammate: values / search strategy} \\
 \bottomrule
-\end{tabular}
-\caption{Hyperparameter grids. For logistic regression, the full grid is $13 \times 2$ model
-hyperparameters $\times\ 3 \times 2 \times 2$ text hyperparameters $= 312$ configurations,
-evaluated on the same 15 cross-validation folds (4{,}680 individual model fits in total). We
-restructured the search so the feature-preprocessing step (the expensive part for a given text
-configuration) runs once per (text-hyperparameters, fold) pair and is reused across all 26
-model-hyperparameter combinations on that pair, rather than being recomputed 312 times per fold.}
+\end{tabularx}
+\caption{Joint hyperparameter grids. The logistic search produced 4,680 validation scores
+and the forest search produced 12,960.}
 \label{tab:grids}
 \end{table}
 
-Ranges are chosen relative to the training-plus-validation pool ($n=741$) and the feature count
-($p\approx370$--$700$ depending on the text hyperparameters), not justified only by being
-log-spaced: the random forest's \texttt{min\_samples\_leaf} grid $\{1,2,5,10\}$ spans from a leaf
-that can fit a single row (a memorization risk given $p\approx n$) to a leaf covering roughly 1.3\%
-of the pool, and \texttt{max\_features}'s $\{\sqrt p, 0.1p, 0.3p\}$ spans roughly 20--30 features
-per split up to $\sim$200, deliberately bracketing the heavy-regularization regime the logistic
-regression results below already show is necessary at this $n$-to-$p$ ratio. The MLP's hidden
-widths $\{32,64,128\}$ are kept well below $p$ for the same reason, rather than scaled up to match
-or exceed the input dimensionality.
+To limit capacity, the MLP's hidden widths $\{32,64,128\}$ are kept well below the input
+dimensionality $p$.
 
 \textbf{Logistic regression results.} Table~\ref{tab:cv-results} shows the ten best configurations
 by mean cross-validation accuracy out of all 312. The best configuration is L1-penalized
@@ -441,9 +452,32 @@ evaluation in Section~\ref{sec:results}.}
 \label{tab:cv-results}
 \end{table}
 
-\textbf{Random forest results.} \todo{teammate to fill in: best hyperparameters found, a short
-table of the top configurations, and a one-sentence comment on how sensitive accuracy was to each
-hyperparameter.}
+\textbf{Random forest results.} The joint search selected 192 trees with unrestricted
+depth, a minimum of one sample per leaf, and $\sqrt p$ candidate features per split. The
+selected word-level TF-IDF representation uses a minimum document frequency of 3 and a cap
+of 300 words per question. A depth-16 forest with the same settings was within 0.01 percentage
+points in mean accuracy, and the best count-based model was also within 0.01 points. These
+differences are small relative to the 2.31-point standard deviation across the winner's
+validation runs.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{@{}Ylrrrr@{}}
+\toprule
+Text setting & Max. depth & Trees & Mean acc. & Fold SD & Macro-F1 \\
+\midrule
+3, 300, TF-IDF & Unlimited & 192 & 90.721\% & 2.31 pp & 0.9072 \\
+3, 300, TF-IDF & 16 & 192 & 90.717\% & 2.69 pp & 0.9071 \\
+5, 100, counts & 16 & 192 & 90.716\% & 2.96 pp & 0.9071 \\
+5, 100, TF-IDF & 16 & 96 & 90.628\% & 2.62 pp & 0.9061 \\
+\bottomrule
+\end{tabularx}
+\caption{Selected results from the joint forest grid. Text settings list minimum document
+frequency, vocabulary cap, and weighting. The first three use $\sqrt p$ candidate features
+per split, and the 96-tree model uses $0.1p$. All four use a minimum leaf size of one.}
+\label{tab:forest-review}
+\end{table}
 
 \textbf{MLP results.} \todo{teammate to fill in: best hyperparameters found, a short table or
 learning-curve plot, and a comment on overfitting behaviour across the epoch budget.}
@@ -471,34 +505,40 @@ confused with each other.
 probabilities (useful if an ensemble across families is attempted).
 \end{itemize}
 
-\subsection{Additional techniques considered}
+\subsection{Additional techniques considered}\label{sec:forest-text}
 
 Word bigrams, merging spelling variants, and removing the near-constant multi-select options
 (\emph{Summer}, \emph{Outdoor public space}) were considered for the text/categorical features but
 not pursued for the final logistic regression model, since L1/L2 regularization already shrinks
 the weight of uninformative columns automatically and the simpler, fully-standardized feature set
-already reaches the accuracy reported in Section~\ref{sec:results}. The random forest's collapsed
-text representation and the MLP's PCA input reduction (Section~\ref{sec:methodology}, Training
-details) are the analogous additional techniques for those two families, and are reported as part
-of their own results rather than repeated here.
-\todo{teammate: note any further additional techniques actually tried for random forest / MLP
-beyond the two above, with the result.}
+already reaches the accuracy reported in Section~\ref{sec:results}.
+
+\textbf{Random forest text experiments.} After selecting the forest settings, we kept them
+fixed and tested two changes to the text features on the same validation runs. Fitting truncated
+SVD on the training partitions and keeping up to eight components each for food and feeling,
+while leaving individual song words intact, gave 90.45\% mean accuracy. Removing only the song
+columns lowered mean accuracy from 90.72\% to 86.77\%. The decrease occurred in all 15 runs
+and averaged 3.95 percentage points, supporting the use of individual song-word features.
+
+\todo{Document any additional techniques used for the MLP, including PCA if tested.}
 
 \section{Results}\label{sec:results}
 
 \begin{table}[h]
 \centering
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabularx}{\linewidth}{@{}Yrrr@{}}
 \toprule
-Model & CV accuracy (mean $\pm$ std) & Locked test accuracy & Locked test macro-F1 \\
+Model & \shortstack[r]{CV accuracy\\(mean $\pm$ std)}
+ & \shortstack[r]{Locked test\\accuracy} & \shortstack[r]{Locked test\\macro-F1} \\
 \midrule
 Logistic regression (L1) & $0.915 \pm 0.035$ & \textbf{0.907} & \textbf{0.905} \\
-Random forest & \todo{teammate} & \todo{teammate} & \todo{teammate} \\
+Random forest (192 trees) & $0.907 \pm 0.023$ & 0.922 & 0.922 \\
 MLP & \todo{teammate} & \todo{teammate} & \todo{teammate} \\
 \bottomrule
-\end{tabular}
-\caption{Comparison across the three model families. The logistic regression row is final; the
-other two rows are pending the respective teammate's results.}
+\end{tabularx}
+\caption{Results by model family. Logistic regression and the forest use the same 15
+validation runs. The forest holdout result reuses the previously evaluated split. The MLP row
+is pending.}
 \label{tab:final-comparison}
 \end{table}
 
@@ -545,9 +585,36 @@ model.}
 \label{tab:perclass}
 \end{table}
 
-\todo{teammate: add the random forest and MLP confusion matrices / per-class reports here, and a
-short comparison of which misclassification patterns are shared across all three families versus
-unique to one of them.}
+We selected the 192-tree forest by cross-validation, refit it on all 741 development rows,
+and evaluated it on the previously scored 129-row holdout. It classified 119 correctly
+(92.25\%), with macro-F1 0.922 and log-loss 0.364. The development fit's out-of-bag accuracy
+was 88.53\%. Row-level bootstrapping can put different answers from a person on both sides
+of this check, so we used the grouped validation accuracy for selection. For deployment, we
+fit the selected settings on all 870 labeled rows. The three prediction files total 0.72\,MB.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{Predicted sport} & \multicolumn{3}{c}{Per-class metrics} \\
+\cmidrule(lr){2-4}\cmidrule(l){5-7}
+True sport & Baseball & Basketball & Soccer & Precision & Recall & F1 \\
+\midrule
+Baseball & 42 & 0 & 1 & 0.875 & 0.977 & 0.923 \\
+Basketball & 2 & 41 & 0 & 0.932 & 0.953 & 0.943 \\
+Soccer & 4 & 3 & 36 & 0.973 & 0.837 & 0.900 \\
+\bottomrule
+\end{tabular}
+\caption{Holdout confusion matrix and per-class metrics for the 192-tree random forest.}
+\label{tab:forest-confusion}
+\end{table}
+
+Soccer had the lowest recall for the forest (0.837). Four Soccer answers were predicted as
+Baseball and three as Basketball. The grouped validation mean supports a forest accuracy estimate
+of about 91\% on new respondents.
+
+\todo{Add the MLP confusion matrix and compare error patterns once all three results are available.}
 
 \textbf{Final single-number test-accuracy estimate.} \todo{Once all three families are compared
 (Table~\ref{tab:final-comparison}), state the single chosen final model here and justify the
@@ -572,10 +639,8 @@ parameters on every row) rather than assumed, since a silent mismatch between tr
 prediction-time features would have been invisible until the hidden test set.
 \item \textbf{\todo{teammate 2} (random forest):} \todo{3 sentences on their contribution and
 main lesson learned.}
-\item \textbf{\todo{teammate 3} (MLP):} \todo{3 sentences on their contribution and main lesson
+\item \textbf{\todo{teammate 3 and teammate 4} (MLP):} \todo{3 sentences on their contribution and main lesson
 learned.}
-\item \textbf{\todo{teammate 4}:} \todo{3 sentences on their contribution and main lesson
-learned -- e.g.\ data exploration, report writing, or a shared responsibility.}
 \end{itemize}
 
 \end{document}
