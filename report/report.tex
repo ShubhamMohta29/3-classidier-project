@@ -154,8 +154,8 @@ Ease of starting (0--10) & numeric & 0.0\% & median impute, standardize \\
 Strategy / injury / individual & Likert, 5-pt & 0.0\% & ordinal 1--5, standardize \\
 Place / season / music & multi-select & 0.0\% & multi-hot, 21 binary \\
 Colour & short text & 1.0\% & top-10 one-hot + other + flag \\
-Food, song, feeling & free text & 2.6 / 9.2 / 0.3\% & TF-IDF per question \\
-Price for a seat & text (number) & 1.6\% + 2.3\% unparsed & parse, $\log(1+\$)$, clip, flag \\
+Food, song, feeling & free text & 2.6/9.2/0.3\% & TF-IDF per question \\
+Price for a seat & text (number) & 1.6\%+2.3\% & parse, $\log(1+\$)$, clip, flag \\&&unparsed&\\
 \bottomrule
 \end{tabularx}
 \caption{Features (training split only). ``Missing'' counts null, empty, ``n/a'', ``-'', ``none''
@@ -349,7 +349,7 @@ partition and selected its settings using development rows.
 \textbf{Logistic regression.} $P(y=k\mid x) \propto \exp(w_k^\top x + b_k)$, trained by minimizing
 mean cross-entropy plus an L2 penalty $\lambda\lVert W\rVert_2^2$ or an L1 penalty
 $\lambda\lVert W\rVert_1$, with $C=1/\lambda$. We use scikit-learn's
-\texttt{LogisticRegression}~\cite{pedregosa2011scikit} (LBFGS for L2, SAGA for L1,
+\texttt{LogisticRegression} (LBFGS for L2, SAGA for L1,
 \texttt{max\_iter}=5000, no class weighting since the classes are exactly balanced). The
 cross-entropy loss is convex, so the fitted model does not depend on initialization.
 Section~\ref{sec:data-exploration}'s exploratory pipeline check used a fixed text configuration
@@ -637,23 +637,10 @@ deployment path. The most important lesson was that correctness checks need to b
 automated (e.g.\ comparing \texttt{pred.py}'s output against a manual reconstruction of the saved
 parameters on every row) rather than assumed, since a silent mismatch between training-time and
 prediction-time features would have been invisible until the hidden test set.
-\item \textbf{Jenny Yang (random forest):} Built the joint tuning of forest settings and text
-features on the same validation runs as logistic regression and verified the exported NumPy
-predictor. To investigate the proposal feedback about sparse song words, removed the
-song features while keeping the selected model settings fixed. The accuracy fell in all 15 runs
-and by 3.95 percentage points on average, giving the team a reason to keep those features.
-\item \textbf{\todo{teammate 3} (MLP):} \todo{3 sentences on their contribution and main lesson
+\item \textbf{\todo{teammate 2} (random forest):} \todo{3 sentences on their contribution and
+main lesson learned.}
+\item \textbf{\todo{teammate 3 and teammate 4} (MLP):} \todo{3 sentences on their contribution and main lesson
 learned.}
-\item \textbf{\todo{teammate 4}:} \todo{3 sentences on their contribution and main lesson
-learned -- e.g.\ data exploration, report writing, or a shared responsibility.}
 \end{itemize}
-
-% ==================================================
-% References
-% ==================================================
-\section{References}
-
-\bibliographystyle{plain}
-\bibliography{references}
 
 \end{document}
