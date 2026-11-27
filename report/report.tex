@@ -98,10 +98,10 @@
     {\large Submitted by \par}
 
     \vspace{0.5cm}
-    {\large \todo{group number}}
+    {\large group number: 62751}
 
     \vspace{0.5cm}
-    {\large \todo{Shubham Mohta, Jenny Yang, Xinyue Li, Ruohong Xu} \par}
+    {\large Shubham Mohta, Jenny Yang, Xinyue Li, Ruohong Xu \par}
 
     \vfill
     {\large University of Toronto \\ Fall 2026 \par}
@@ -727,7 +727,7 @@ features on the same validation runs as logistic regression and verified the exp
 predictor. To investigate the proposal feedback about sparse song words, removed the
 song features while keeping the selected model settings fixed. The accuracy fell in all 15 runs
 and by 3.95 percentage points on average, giving the team a reason to keep those features.
-\item \textbf{{Xinyue Li and Ruohong Xu} (MLP):} Built the MLP pipeline: the random search over layers, width, learning
+\item \textbf{Xinyue Li and Ruohong Xu (MLP):} Built the MLP pipeline: the random search over layers, width, learning
 rate, weight decay and dropout on the shared grouped folds, the 15-fold final evaluation, and the numpy-only
 \texttt{pred.py} with a check that it matches PyTorch. The main lesson was that with only 741 rows the network
 overfits within a dozen epochs, so early stopping, weight decay and a fair comparison on shared folds mattered more than
