@@ -1,0 +1,53 @@
+15 shared validation runs covering 5 distinct respondent groups.
+12 text settings × 72 forest settings.
+  15/180 text-setting/fold jobs finished.
+  30/180 text-setting/fold jobs finished.
+  45/180 text-setting/fold jobs finished.
+  60/180 text-setting/fold jobs finished.
+  75/180 text-setting/fold jobs finished.
+  90/180 text-setting/fold jobs finished.
+  105/180 text-setting/fold jobs finished.
+  120/180 text-setting/fold jobs finished.
+  135/180 text-setting/fold jobs finished.
+  150/180 text-setting/fold jobs finished.
+  165/180 text-setting/fold jobs finished.
+  180/180 text-setting/fold jobs finished.
+864 configurations, 12960 fold scores in 221.4s.
+ min_df  vocab_cap weighting representation  min_samples_leaf max_features  max_depth  n_estimators  mean_acc  std_acc  mean_f1  mean_log_loss
+      3        300     tfidf          words                 1         sqrt          0           192  0.907211 0.023078 0.907183       0.407871
+      3        300     tfidf          words                 1         sqrt         16           192  0.907175 0.026909 0.907119       0.390869
+      5        100     count          words                 1         sqrt         16           192  0.907156 0.029556 0.907070       0.372145
+      5        300     count          words                 1         sqrt         16           192  0.907156 0.029556 0.907070       0.372145
+      3        300     count          words                 1         sqrt         16           192  0.907147 0.028515 0.907149       0.389011
+      5        100     tfidf          words                 1          0.1         16           192  0.907147 0.026611 0.907066       0.347533
+      5        300     tfidf          words                 1          0.1         16           192  0.907147 0.026611 0.907066       0.347533
+      2        100     tfidf          words                 1         sqrt         16           192  0.906739 0.023479 0.906723       0.387281
+      3        100     tfidf          words                 1         sqrt         16           192  0.906712 0.028706 0.906533       0.384514
+      5        100     tfidf          words                 1          0.1         16            96  0.906277 0.026236 0.906088       0.346631
+Selected configuration: {'min_df': 3, 'vocab_cap': 300, 'weighting': 'tfidf', 'representation': 'words', 'min_samples_leaf': 1, 'max_features': 'sqrt', 'max_depth': 0, 'n_estimators': 192}
+Fixed forest settings, mean CV accuracy by representation:
+representation
+no_song_words    0.867664
+song_words       0.904508
+words            0.907211
+Song ablation: 15/15 runs improved with songs; mean difference +0.039546.
+Development out-of-bag accuracy: 0.885290
+Holdout metrics for the selected settings (previously scored split):
+  acc: 0.922481
+  f1: 0.921869
+  log_loss: 0.364327
+Confusion matrix, rows=true and columns=predicted, order=['Baseball', 'Basketball', 'Soccer']:
+[[42  0  1]
+ [ 2 41  0]
+ [ 4  3 36]]
+              precision    recall  f1-score   support
+
+    Baseball   0.875000  0.976744  0.923077        43
+  Basketball   0.931818  0.953488  0.942529        43
+      Soccer   0.972973  0.837209  0.900000        43
+
+    accuracy                       0.922481       129
+   macro avg   0.926597  0.922481  0.921869       129
+weighted avg   0.926597  0.922481  0.921869       129
+
+Export verified on all 870 rows. Prediction files total 722,222 bytes.

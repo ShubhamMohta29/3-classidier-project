@@ -50,14 +50,14 @@ def load_data():
     return data
 
 
-def iter_cv_folds(pool):
-    # Match the first repeat in linear_model/train_softmax.py. Its other
-    # repeats permute rows but reuse the same respondent memberships.
-    order = np.random.default_rng(SEED).permutation(len(pool))
-    shuffled = pool.iloc[order]
-    groups = shuffled[features.ID_COL]
-    for train, val in GroupKFold(n_splits=5).split(shuffled, groups=groups):
-        yield shuffled.iloc[train], shuffled.iloc[val]
+def iter_cv_folds(pool, n_repeats=1):
+    """Match the linear trainer's row orders and respondent-held-out groups."""
+    for repeat in range(n_repeats):
+        order = np.random.default_rng(SEED + repeat).permutation(len(pool))
+        shuffled = pool.iloc[order]
+        groups = shuffled[features.ID_COL]
+        for train, val in GroupKFold(n_splits=5).split(shuffled, groups=groups):
+            yield shuffled.iloc[train], shuffled.iloc[val]
 
 
 def fit_text_projection(X, state, representation="svd"):
@@ -89,7 +89,7 @@ def fit_text_projection(X, state, representation="svd"):
     return np.vstack(blocks)
 
 
-def fit_forest(X, y, config, *, oob_score=False):
+def fit_forest(X, y, config, *, oob_score=False, warm_start=False):
     _, leaf, max_features, depth, n_trees = config
     forest = RandomForestClassifier(
         n_estimators=n_trees,
@@ -99,6 +99,7 @@ def fit_forest(X, y, config, *, oob_score=False):
         random_state=SEED,
         n_jobs=1,
         oob_score=oob_score,
+        warm_start=warm_start,
     )
     return forest.fit(X, y)
 
@@ -126,31 +127,44 @@ def fit_cv_unit(unit):
             pred.project_text(X_train, components), pred.project_text(X_val, components),
         )
 
+    tree_counts = {}
+    for *params, n_trees in configs:
+        tree_counts.setdefault(tuple(params), []).append(n_trees)
+
     records = []
-    for config in configs:
-        train_design, val_design = designs[config[0]]
-        forest = fit_forest(train_design, y_train, config)
-        records.append((
-            *text_params, *config, fold,
-            *score(y_val, forest.predict_proba(val_design), forest.classes_).values(),
-        ))
+    for params, counts in tree_counts.items():
+        train_design, val_design = designs[params[0]]
+        first, *rest = sorted(counts)
+        forest = fit_forest(train_design, y_train, (*params, first), warm_start=bool(rest))
+        for n_trees in (first, *rest):
+            if n_trees != first:
+                forest.set_params(n_estimators=n_trees).fit(train_design, y_train)
+            records.append((
+                *text_params, *params, n_trees, fold,
+                *score(y_val, forest.predict_proba(val_design), forest.classes_).values(),
+            ))
     return records
 
 
-def run_cv(folds, grid, workers):
+def run_cv(folds, grid, workers, *, show_progress=False):
     units = [
         (text_params, fold, train, val, configs)
         for text_params, configs in grid.items()
         for fold, (train, val) in enumerate(folds, 1)
     ]
-    records = []
+    def collect(results):
+        records = []
+        for i, result in enumerate(results, 1):
+            records.extend(result)
+            if show_progress and (i % 15 == 0 or i == len(units)):
+                print(f"  {i}/{len(units)} text-setting/fold jobs finished.", flush=True)
+        return records
+
     if workers == 1:
-        for unit in units:
-            records.extend(fit_cv_unit(unit))
+        records = collect(map(fit_cv_unit, units))
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            for result in pool.map(fit_cv_unit, units):
-                records.extend(result)
+            records = collect(pool.map(fit_cv_unit, units))
     return pd.DataFrame(records, columns=TEXT_KEYS + MODEL_KEYS + ["fold", "acc", "f1", "log_loss"])
 
 
