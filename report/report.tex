@@ -544,7 +544,9 @@ the proposal feedback on text preprocessing, we also searched the same 12 text s
 frequency 2/3/5, vocabulary cap 100/300, TF-IDF or counts) for the MLP, re-tuning its hyperparameters 
 under each. The best setting (minimum document frequency 3, cap 100, counts) reached $0.903 \pm 0.030$ 
 cross-validated accuracy and $0.907$ on the locked test set, not meaningfully different from our fixed 
-setting ($0.898 \pm 0.036$ and $0.923$), so we kept the original MLP.
+setting ($0.898 \pm 0.036$ and $0.923$), so, since the difference is far smaller than the fold 
+standard deviation and the original configuration was fixed before this check, we kept it and did not 
+use the locked test set to choose between them.
 
 \subsection{Comparing families and evaluation metrics}
 
