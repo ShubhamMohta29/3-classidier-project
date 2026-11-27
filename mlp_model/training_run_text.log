@@ -1,0 +1,37 @@
+Text setting: {'min_df': 3, 'max_vocab': 100, 'weighting': 'count'}
+MLP config:   {'hidden_layers': 3, 'hidden_width': 32, 'lr': 0.0001, 'weight_decay': 0.01, 'dropout': 0.3}
+fold 1/15: acc=0.9222
+fold 2/15: acc=0.9333
+fold 3/15: acc=0.8549
+fold 4/15: acc=0.9206
+fold 5/15: acc=0.8844
+fold 6/15: acc=0.9133
+fold 7/15: acc=0.9378
+fold 8/15: acc=0.8639
+fold 9/15: acc=0.9252
+fold 10/15: acc=0.8844
+fold 11/15: acc=0.9133
+fold 12/15: acc=0.9333
+fold 13/15: acc=0.8481
+fold 14/15: acc=0.9138
+fold 15/15: acc=0.8889
+
+MLP (text-tuned) CV accuracy: 0.9025 +/- 0.0296 macro-F1: 0.9025   (previous fixed-text MLP: 0.8978 +/- 0.0362)
+Median best epoch: 85
+
+Locked test accuracy: 0.907
+Locked test macro-F1: 0.9069
+[[40  2  1]
+ [ 2 40  1]
+ [ 3  3 37]]
+              precision    recall  f1-score   support
+
+    Baseball       0.89      0.93      0.91        43
+  Basketball       0.89      0.93      0.91        43
+      Soccer       0.95      0.86      0.90        43
+
+    accuracy                           0.91       129
+   macro avg       0.91      0.91      0.91       129
+weighted avg       0.91      0.91      0.91       129
+
+Saved mlp_model_text.npz
