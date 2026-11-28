@@ -8,7 +8,7 @@ from sklearn.model_selection import GroupKFold
 from copy import deepcopy
 from sklearn.metrics import f1_score
 
-from mlp_features import Preprocessor
+from features import Preprocessor
 from torch.utils.data import DataLoader, TensorDataset
 
 def iter_cv_folds(pool_df, seed0=311, n_splits=5, n_repeats=3):
